@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="IoT Sorting - Sistema de monitoramento e classificação de objetos em esteira com ESP32-CAM.">
+    <meta name="color-scheme" content="dark">
+    <title>IoT Sorting — Sistema de monitoramento e classificação</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b1120'/><circle cx='16' cy='16' r='8' fill='none' stroke='%2338bdf8' stroke-width='3'/><circle cx='16' cy='16' r='3' fill='%2338bdf8'/></svg>">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<a class="pular-conteudo" href="#conteudo">Pular para o conteúdo principal</a>
+
+<header class="cabecalho">
+    <div class="marca">
+        <span class="marca-simbolo" aria-hidden="true"></span>
+        <div class="marca-textos">
+            <h1>IoT Sorting</h1>
+            <p class="marca-subtitulo">Sistema de monitoramento e classificação</p>
+        </div>
+    </div>
+
+    <div class="cabecalho-acoes">
+        <div class="campo-selecao">
+            <label for="seletor-dispositivo">Dispositivo</label>
+            <select id="seletor-dispositivo" aria-describedby="ajuda-dispositivo">
+                <option value="">Carregando dispositivos…</option>
+            </select>
+            <span id="ajuda-dispositivo" class="visualmente-oculto">Selecione o ESP32-CAM cujos dados serão exibidos.</span>
+        </div>
+
+        <p id="status-sistema" class="indicador indicador--neutro" role="status" aria-live="polite">
+            <span class="indicador-simbolo" aria-hidden="true">■</span>
+            <span class="indicador-texto">CONECTANDO</span>
+        </p>
+    </div>
+</header>
+
+<main id="conteudo">
+    <section class="grade-cartoes" aria-label="Indicadores principais">
+        <article class="cartao cartao--destaque">
+            <h2 class="cartao-titulo">Objetos hoje</h2>
+            <p class="cartao-valor" id="valor-objetos-hoje">—</p>
+            <p class="cartao-apoio">Detecções desde 00:00</p>
+        </article>
+
+        <article class="cartao cartao--vermelho">
+            <h2 class="cartao-titulo">Vermelhos</h2>
+            <p class="cartao-valor" id="valor-vermelhos">—</p>
+            <p class="cartao-apoio">Objetos identificados hoje</p>
+        </article>
+
+        <article class="cartao cartao--verde">
+            <h2 class="cartao-titulo">Verdes</h2>
+            <p class="cartao-valor" id="valor-verdes">—</p>
+            <p class="cartao-apoio">Objetos identificados hoje</p>
+        </article>
+
+        <article class="cartao cartao--azul">
+            <h2 class="cartao-titulo">Azuis</h2>
+            <p class="cartao-valor" id="valor-azuis">—</p>
+            <p class="cartao-apoio">Objetos identificados hoje</p>
+        </article>
+
+        <article class="cartao cartao--status">
+            <h2 class="cartao-titulo">Estado da esteira</h2>
+            <p class="cartao-status" id="valor-esteira" data-estado="desconhecido">
+                <span class="indicador-simbolo" aria-hidden="true">■</span>
+                <span class="indicador-texto">SEM DADOS</span>
+            </p>
+            <p class="cartao-apoio" id="apoio-esteira">Aguardando comunicação do dispositivo</p>
+        </article>
+
+        <article class="cartao cartao--status">
+            <h2 class="cartao-titulo">Estado do ESP32</h2>
+            <p class="cartao-status" id="valor-dispositivo" data-estado="desconhecido">
+                <span class="indicador-simbolo" aria-hidden="true">■</span>
+                <span class="indicador-texto">SEM DADOS</span>
+            </p>
+            <p class="cartao-apoio" id="apoio-dispositivo">Aguardando comunicação do dispositivo</p>
+        </article>
+    </section>
+
+    <section class="grade-conteudo">
+        <article class="painel">
+            <header class="painel-cabecalho">
+                <h2>Distribuição das cores (hoje)</h2>
+                <span class="etiqueta" id="grafico-total">Total: —</span>
+            </header>
+            <div class="grafico-area">
+                <canvas id="grafico-cores" role="img" aria-describedby="grafico-resumo"
+                        aria-label="Gráfico de distribuição das cores detectadas hoje"></canvas>
+            </div>
+            <p id="grafico-vazio" class="texto-apoio" hidden>Nenhuma detecção registrada hoje.</p>
+            <p id="grafico-resumo" class="texto-apoio">Aguardando dados das detecções…</p>
+        </article>
+
+        <article class="painel">
+            <header class="painel-cabecalho">
+                <h2>Dispositivo</h2>
+                <span class="etiqueta" id="etiqueta-dispositivo">—</span>
+            </header>
+
+            <dl class="lista-dados">
+                <div class="linha-dados">
+                    <dt>Nome</dt>
+                    <dd id="dado-nome">—</dd>
+                </div>
+                <div class="linha-dados">
+                    <dt>Código</dt>
+                    <dd id="dado-codigo">—</dd>
+                </div>
+                <div class="linha-dados">
+                    <dt>Endereço IP</dt>
+                    <dd id="dado-ip">—</dd>
+                </div>
+                <div class="linha-dados">
+                    <dt>Status</dt>
+                    <dd id="dado-status">—</dd>
+                </div>
+                <div class="linha-dados">
+                    <dt>Última conexão</dt>
+                    <dd id="dado-ultima-conexao">—</dd>
+                </div>
+                <div class="linha-dados">
+                    <dt>Última detecção</dt>
+                    <dd id="dado-ultima-deteccao">—</dd>
+                </div>
+                <div class="linha-dados">
+                    <dt>Dispositivos cadastrados</dt>
+                    <dd id="dado-total-dispositivos">—</dd>
+                </div>
+            </dl>
+
+            <form id="form-dispositivo" class="formulario" novalidate>
+                <h3 class="formulario-titulo">Cadastrar dispositivo</h3>
+                <div class="campo-formulario">
+                    <label for="campo-nome">Nome</label>
+                    <input type="text" id="campo-nome" name="nome" maxlength="120" placeholder="Esteira 2" required>
+                </div>
+                <div class="campo-formulario">
+                    <label for="campo-codigo">Código</label>
+                    <input type="text" id="campo-codigo" name="codigo" maxlength="60" placeholder="ESP32CAM-002" required>
+                </div>
+                <div class="campo-formulario">
+                    <label for="campo-ip">Endereço IP</label>
+                    <input type="text" id="campo-ip" name="ip" maxlength="45" placeholder="192.168.1.101">
+                </div>
+                <div class="formulario-acoes">
+                    <button type="submit" class="botao botao--primario" id="botao-cadastrar">Cadastrar</button>
+                    <button type="button" class="botao" id="botao-atualizar">Atualizar agora</button>
+                </div>
+                <p class="mensagem-formulario" id="mensagem-formulario" role="status" aria-live="polite"></p>
+            </form>
+        </article>
+    </section>
+
+    <section class="painel">
+        <header class="painel-cabecalho">
+            <h2>Últimas detecções</h2>
+            <span class="etiqueta" id="etiqueta-recentes">—</span>
+        </header>
+
+        <div class="tabela-responsiva">
+            <table>
+                <caption class="visualmente-oculto">Últimas detecções registradas pelo ESP32-CAM</caption>
+                <thead>
+                <tr>
+                    <th scope="col">Horário</th>
+                    <th scope="col">Cor</th>
+                    <th scope="col">Confiança</th>
+                    <th scope="col">Dispositivo</th>
+                </tr>
+                </thead>
+                <tbody id="corpo-tabela">
+                <tr>
+                    <td colspan="4" class="tabela-mensagem">Carregando detecções…</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<footer class="rodape">
+    <span>IoT Sorting v1.0 — Java · Spring Boot · SQLite · ESP32-CAM</span>
+    <span id="ultima-atualizacao">Aguardando atualização…</span>
+</footer>
+
+<script src="/js/vendor/chart.umd.min.js"></script>
+<script src="/js/dashboard.js"></script>
+</body>
+</html>
+
+                <span class="indicador-simbolo" aria-hidden="true">■</span>
+                <span class="indicador-texto">SEM DADOS</span>
+            </p>
+            <p class="cartao-apoio" id="apoio-dispositivo">Aguardando comunicação do dispositivo</p>
+        </article>
+    </section>

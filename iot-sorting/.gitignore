@@ -1,0 +1,28 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Banco de dados SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

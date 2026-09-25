@@ -1,0 +1,11 @@
+_tmp/
+.vscode/
+.idea/
+*.log
+
+# Banco de dados SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
