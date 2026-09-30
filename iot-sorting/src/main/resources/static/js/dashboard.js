@@ -72,15 +72,23 @@
     }
 
     function formatarHora(iso) {
-        var data = new Date(iso);
+        var data = new Date(normalizarIso(iso));
         return isNaN(data.getTime()) ? '—' : data.toLocaleTimeString('pt-BR', { hour12: false });
+    }
+
+    /** O backend envia LocalDateTime; alguns navegadores nao aceitam fracoes com mais de 3 digitos. */
+    function normalizarIso(valor) {
+        if (!valor) {
+            return '';
+        }
+        return String(valor).replace(/(\.\d{3})\d+/, '$1');
     }
 
     function formatarDataHora(iso) {
         if (!iso) {
             return '—';
         }
-        var data = new Date(iso);
+        var data = new Date(normalizarIso(iso));
         return isNaN(data.getTime())
             ? '—'
             : data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour12: false });

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="IoT Sorting - simulador do celular do operador: seleciona a cor do objeto, envia para o ESP32 e acompanha o registro no backend.">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0b1120">
+    <title>IoT Sorting — Controle da Esteira</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b1120'/><circle cx='16' cy='16' r='8' fill='none' stroke='%2338bdf8' stroke-width='3'/><circle cx='16' cy='16' r='3' fill='%2338bdf8'/></svg>">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/simulador.css">
+</head>
+<body>
+<a class="pular-conteudo" href="#conteudo">Pular para o conteúdo principal</a>
+
+<header class="cabecalho">
+    <div class="marca">
+        <span class="marca-simbolo" aria-hidden="true"></span>
+        <div class="marca-textos">
+            <h1>IoT Sorting</h1>
+            <p class="marca-subtitulo">Controle da Esteira</p>
+        </div>
+    </div>
+
+    <div class="cabecalho-acoes">
+        <p id="indicador-modo" class="indicador indicador--neutro" role="status" aria-live="polite">
+            <span class="indicador-simbolo" aria-hidden="true">■</span>
+            <span class="indicador-texto">MODO ESP32</span>
+        </p>
+        <a class="botao botao--link" href="/">Dashboard</a>
+    </div>
+</header>
+
+<main id="conteudo">
+    <p class="aviso" id="aviso-https" hidden></p>
+
+    <!-- ============================================================
+         Modo de operacao: ESP32 (real) ou BACKEND DIRETO (teste)
+         ============================================================ -->
+    <section class="painel" aria-labelledby="titulo-modo">
+        <header class="painel-cabecalho">
+            <h2 id="titulo-modo">Modo de operação</h2>
+            <span class="etiqueta" id="etiqueta-modo">ESP32</span>
+        </header>
+
+        <div class="seletor-modo" role="group" aria-label="Modo de operação">
+            <button type="button" class="botao-modo" id="botao-modo-esp32" data-modo="ESP32" aria-pressed="true">MODO ESP32</button>
+            <button type="button" class="botao-modo" id="botao-modo-backend" data-modo="BACKEND" aria-pressed="false">MODO BACKEND</button>
+        </div>
+
+        <p class="texto-apoio" id="descricao-modo"></p>
+
+        <dl class="lista-dados">
+            <div class="linha-dados">
+                <dt>ESP32</dt>
+                <dd id="dado-esp32-url">—</dd>
+            </div>
+            <div class="linha-dados">
+                <dt>Backend</dt>
+                <dd id="dado-backend-url">—</dd>
+            </div>
+            <div class="linha-dados">
+                <dt>Dispositivo</dt>
+                <dd id="dado-dispositivo">—</dd>
+            </div>
+        </dl>
+    </section>
+
+    <!-- ============================================================
+         Selecao da cor + PROCESSAR OBJETO
+         ============================================================ -->
+    <section class="painel" aria-labelledby="titulo-cores">
+        <header class="painel-cabecalho">
+            <h2 id="titulo-cores">Selecione a cor do objeto</h2>
+            <span class="etiqueta" id="etiqueta-cor">—</span>
+        </header>
+
+        <div class="grade-cores" id="grade-cores" role="group" aria-label="Cores disponíveis">
+            <button type="button" class="botao-cor botao-cor--vermelho" data-cor="VERMELHO" aria-pressed="false">
+                <span class="botao-cor-amostra" aria-hidden="true"></span>
+                <span class="botao-cor-rotulo">VERMELHO</span>
+            </button>
+            <button type="button" class="botao-cor botao-cor--verde" data-cor="VERDE" aria-pressed="false">
+                <span class="botao-cor-amostra" aria-hidden="true"></span>
+                <span class="botao-cor-rotulo">VERDE</span>
+            </button>
+            <button type="button" class="botao-cor botao-cor--azul" data-cor="AZUL" aria-pressed="false">
+                <span class="botao-cor-amostra" aria-hidden="true"></span>
+                <span class="botao-cor-rotulo">AZUL</span>
+            </button>
+            <button type="button" class="botao-cor botao-cor--amarelo" data-cor="AMARELO" aria-pressed="false">
+                <span class="botao-cor-amostra" aria-hidden="true"></span>
+                <span class="botao-cor-rotulo">AMARELO</span>
+            </button>
+            <button type="button" class="botao-cor botao-cor--branco" data-cor="BRANCO" aria-pressed="false">
+                <span class="botao-cor-amostra" aria-hidden="true"></span>
+                <span class="botao-cor-rotulo">BRANCO</span>
+            </button>
+            <button type="button" class="botao-cor botao-cor--preto" data-cor="PRETO" aria-pressed="false">
+                <span class="botao-cor-amostra" aria-hidden="true"></span>
+                <span class="botao-cor-rotulo">PRETO</span>
+            </button>
+        </div>
+
+        <p class="texto-cor-selecionada" id="texto-cor-selecionada" role="status" aria-live="polite">Nenhuma cor selecionada</p>
+
+        <button type="button" class="botao-processar" id="botao-processar" disabled>
+            <span id="botao-processar-texto">PROCESSAR OBJETO</span>
+        </button>
+
+        <p class="mensagem-formulario" id="mensagem-processamento" role="status" aria-live="assertive"></p>
+    </section>
+
+    <!-- ============================================================
+         Status ao vivo (ESP32 + backend)
+         ============================================================ -->
+    <section class="grade-status" aria-label="Status da esteira e da comunicação">
+        <article class="cartao cartao--status">
+            <h2 class="cartao-titulo">Esteira</h2>
+            <p class="cartao-status indicador" id="valor-esteira" data-estado="desconhecido">
+                <span class="indicador-simbolo" aria-hidden="true">■</span>
+                <span class="indicador-texto">SEM DADOS</span>
+            </p>
+            <p class="cartao-apoio" id="apoio-esteira">Aguardando GET /status do ESP32</p>
+        </article>
+
+        <article class="cartao cartao--status">
+            <h2 class="cartao-titulo">Status</h2>
+            <p class="cartao-status indicador" id="valor-status" data-estado="desconhecido">
+                <span class="indicador-simbolo" aria-hidden="true">■</span>
+                <span class="indicador-texto">SEM DADOS</span>
+            </p>
+            <p class="cartao-apoio" id="apoio-status">Campo "processando" do ESP32</p>
+        </article>
+
+        <article class="cartao cartao--status">
+            <h2 class="cartao-titulo">Backend</h2>
+            <p class="cartao-status indicador" id="valor-backend" data-estado="desconhecido">
+                <span class="indicador-simbolo" aria-hidden="true">■</span>
+                <span class="indicador-texto">VERIFICANDO</span>
+            </p>
+            <p class="cartao-apoio" id="apoio-backend">Consultando GET /api/dashboard</p>
+        </article>
+
+        <article class="cartao cartao--status">
+            <h2 class="cartao-titulo">Cor no ESP32</h2>
+            <p class="cartao-valor-pequeno" id="valor-cor-esp32">—</p>
+            <p class="cartao-apoio" id="apoio-cor-esp32">Campo "cor" do GET /status</p>
+        </article>
+    </section>
+
+    <!-- ============================================================
+         Ultima deteccao registrada no backend
+         ============================================================ -->
+    <section class="cartao cartao--destaque" aria-labelledby="titulo-ultima">
+        <h2 class="cartao-titulo" id="titulo-ultima">Última detecção no backend</h2>
+        <p class="ultima-deteccao">
+            <span class="rotulo-cor rotulo-cor--indefinido" id="ultima-cor">SEM DADOS</span>
+            <span class="cartao-valor" id="ultima-hora">—</span>
+        </p>
+        <p class="cartao-apoio" id="ultima-apoio">Fonte: GET /api/dashboard (campo ultimaDeteccao) + GET /api/objetos/recentes</p>
+    </section>
+
+    <!-- ============================================================
+         Contadores do dashboard (nenhum valor fixo no codigo)
+         ============================================================ -->
+    <section class="painel" aria-labelledby="titulo-contadores">
+        <header class="painel-cabecalho">
+            <h2 id="titulo-contadores">Objetos hoje</h2>
+            <span class="etiqueta" id="contadores-atualizado">—</span>
+        </header>
+
+        <div class="grade-contadores">
+            <div class="contador contador--destaque">
+                <span class="contador-rotulo">Objetos hoje</span>
+                <span class="contador-valor" id="contador-objetosHoje">—</span>
+            </div>
+            <div class="contador">
+                <span class="contador-rotulo">Vermelhos</span>
+                <span class="contador-valor" id="contador-vermelhos">—</span>
+            </div>
+            <div class="contador">
+                <span class="contador-rotulo">Verdes</span>
+                <span class="contador-valor" id="contador-verdes">—</span>
+            </div>
+            <div class="contador">
+                <span class="contador-rotulo">Azuis</span>
+                <span class="contador-valor" id="contador-azuis">—</span>
+            </div>
+            <div class="contador">
+                <span class="contador-rotulo">Amarelos</span>
+                <span class="contador-valor" id="contador-amarelos">—</span>
+            </div>
+            <div class="contador">
+                <span class="contador-rotulo">Brancos</span>
+                <span class="contador-valor" id="contador-brancos">—</span>
+            </div>
+            <div class="contador">
+                <span class="contador-rotulo">Pretos</span>
+                <span class="contador-valor" id="contador-pretos">—</span>
+            </div>
+            <div class="contador">
+                <span class="contador-rotulo">Indefinidos</span>
+                <span class="contador-valor" id="contador-indefinidos">—</span>
+            </div>
+        </div>
+
+        <p class="texto-apoio" id="contadores-detalhe">Aguardando dados de GET /api/dashboard.</p>
+    </section>
+
+    <!-- ============================================================
+         Registro das requisicoes HTTP realmente executadas
+         ============================================================ -->
+    <section class="painel" aria-labelledby="titulo-log">
+        <header class="painel-cabecalho">
+            <h2 id="titulo-log">Comunicação HTTP real</h2>
+            <button type="button" class="botao botao-pequeno" id="botao-limpar-log">Limpar</button>
+        </header>
+        <ol class="lista-log" id="lista-log" aria-live="polite" aria-label="Requisições HTTP executadas pelo simulador">
+            <li class="log-vazio">Nenhuma requisição registrada ainda.</li>
+        </ol>
+        <p class="texto-apoio">Cada linha é uma requisição executada pelo navegador. O simulador não inventa respostas: quando o ESP32 ou o backend não respondem, o erro aparece aqui com o código HTTP ou o motivo da falha.</p>
+    </section>
+
+    <!-- ============================================================
+         Configuracao (ESP32 / backend) - valores salvos no navegador
+         ============================================================ -->
+    <section class="painel" aria-labelledby="titulo-config">
+        <details id="configuracoes">
+            <summary id="titulo-config">Configurações (ESP32 · backend · dispositivo)</summary>
+
+            <form id="form-config" class="formulario" novalidate>
+                <div class="campo-formulario">
+                    <label for="campo-esp32">URL do ESP32</label>
+                    <input type="text" id="campo-esp32" name="esp32" maxlength="120" placeholder="http://192.168.1.6" autocomplete="off" spellcheck="false">
+                </div>
+
+                <div class="campo-formulario">
+                    <label for="campo-backend">URL do backend (vazio = mesma origem da página)</label>
+                    <input type="text" id="campo-backend" name="backend" maxlength="160" placeholder="https://iot-sorting.onrender.com" autocomplete="off" spellcheck="false">
+                </div>
+
+                <div class="campo-formulario">
+                    <label for="campo-dispositivo">ID do dispositivo (MODO BACKEND)</label>
+                    <input type="number" id="campo-dispositivo" name="dispositivoId" min="1" step="1" inputmode="numeric">
+                </div>
+
+                <div class="campo-formulario">
+                    <label for="campo-confianca">Confiança enviada (MODO BACKEND)</label>
+                    <input type="number" id="campo-confianca" name="confianca" min="0" max="100" step="1" inputmode="numeric">
+                </div>
+
+                <div class="formulario-acoes">
+                    <button type="submit" class="botao botao--primario" id="botao-salvar-config">Salvar</button>
+                    <button type="button" class="botao" id="botao-testar-esp32">Testar ESP32</button>
+                    <button type="button" class="botao" id="botao-testar-backend">Testar backend</button>
+                    <button type="button" class="botao" id="botao-restaurar-config">Restaurar padrão</button>
+                </div>
+
+                <p class="mensagem-formulario" id="mensagem-config" role="status" aria-live="polite"></p>
+            </form>
+
+            <p class="texto-apoio">
+                Alterne o modo acima para escolher quem registra o objeto: em <strong>MODO ESP32</strong> o pedido
+                vai para o ESP32 (<code>GET /cor</code> + <code>GET /processar</code>) e é o ESP32 que envia o
+                objeto ao backend depois de parar a esteira por ~2s. Em <strong>MODO BACKEND</strong> o próprio
+                simulador envia <code>POST /api/objetos</code> — use apenas para testar o backend sem o ESP32.
+            </p>
+            <p class="texto-apoio">
+                Se o ESP32 não responder, confirme que o celular está na mesma rede Wi-Fi do ESP32 e que o firmware
+                envia o cabeçalho <code>Access-Control-Allow-Origin</code> (a página e o ESP32 são origens
+                diferentes para o navegador).
+            </p>
+        </details>
+    </section>
+</main>
+
+<footer class="rodape">
+    <span>IoT Sorting v1.0 — Simulador do celular · Java · Spring Boot · ESP32</span>
+    <span id="rodape-detalhe">Carregando configuração…</span>
+</footer>
+
+<script src="/js/simulador.config.js"></script>
+<script src="/js/simulador.js"></script>
+</body>
+</html>

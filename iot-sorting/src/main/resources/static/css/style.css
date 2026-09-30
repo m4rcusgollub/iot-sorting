@@ -499,6 +499,13 @@ p {
     background: linear-gradient(180deg, #37b6ec, #0b8dbb);
 }
 
+/* Botao usado como link (ex.: atalho para o simulador do celular) */
+.botao--link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
 .botao[disabled] {
     opacity: 0.6;
     cursor: progress;

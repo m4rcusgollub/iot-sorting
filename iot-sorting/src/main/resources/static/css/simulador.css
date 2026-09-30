@@ -1,0 +1,365 @@
+/* =====================================================================
+   IoT Sorting - Simulador do celular (Controle da Esteira)
+   ---------------------------------------------------------------------
+   Carregado DEPOIS de style.css: reaproveita as variaveis de tema, o
+   cabecalho, os cartoes, os paineis, os botoes e os indicadores de status
+   ja existentes no dashboard. Aqui ficam apenas os componentes exclusivos
+   do simulador. Mobile first (o operador usa o celular na demonstracao).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Layout: coluna unica, largura confortavel e espaco para o dedo
+   --------------------------------------------------------------------- */
+
+#conteudo {
+    max-width: 760px;
+    gap: 14px;
+    padding: 14px clamp(12px, 3vw, 20px) 24px;
+}
+
+.cabecalho {
+    position: static;
+    padding: 14px clamp(12px, 3vw, 20px);
+}
+
+.cabecalho-acoes {
+    align-items: center;
+    gap: 10px;
+}
+
+/* ---------------------------------------------------------------------
+   Aviso (ex.: pagina HTTPS tentando falar com o ESP32 HTTP)
+   --------------------------------------------------------------------- */
+
+.aviso {
+    display: flex;
+    gap: 10px;
+    padding: 11px 13px;
+    border-radius: var(--raio-pequeno);
+    border: 1px solid rgba(245, 165, 36, 0.5);
+    background: rgba(245, 165, 36, 0.08);
+    color: #ffd08a;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.aviso[hidden] {
+    display: none;
+}
+
+/* ---------------------------------------------------------------------
+   Seletor de modo (ESP32 x BACKEND DIRETO)
+   --------------------------------------------------------------------- */
+
+.seletor-modo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 5px;
+    border-radius: 999px;
+    border: 1px solid var(--cor-borda);
+    background: rgba(9, 15, 28, 0.75);
+}
+
+.botao-modo {
+    padding: 13px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--cor-texto-suave);
+    font-family: var(--fonte-numeros);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background var(--transicao), color var(--transicao);
+}
+
+.botao-modo[aria-pressed="true"] {
+    background: linear-gradient(180deg, #2aa8dd, var(--cor-primaria-escura));
+    color: #04212e;
+}
+
+/* ---------------------------------------------------------------------
+   Botoes de cor
+   Nao dependem apenas da cor: cada botao tem amostra + rotulo escrito.
+   --------------------------------------------------------------------- */
+
+.grade-cores {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 420px) {
+    .grade-cores {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.botao-cor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 92px;
+    padding: 12px 6px;
+    border-radius: var(--raio);
+    border: 2px solid var(--cor-borda-forte);
+    background: linear-gradient(180deg, var(--cor-painel-2), var(--cor-painel));
+    color: var(--cor-texto);
+    font-family: var(--fonte-numeros);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: border-color var(--transicao), box-shadow var(--transicao), transform var(--transicao);
+}
+
+.botao-cor:active {
+    transform: translateY(1px);
+}
+
+.botao-cor[aria-pressed="true"] {
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.28);
+}
+
+.botao-cor[aria-pressed="true"] .botao-cor-rotulo::after {
+    content: " \2713";
+    color: var(--cor-primaria);
+}
+
+.botao-cor-amostra {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid rgba(232, 238, 251, 0.35);
+    background: var(--cor-borda-forte);
+}
+
+.botao-cor--vermelho .botao-cor-amostra { background: var(--cor-vermelho); }
+.botao-cor--verde .botao-cor-amostra { background: var(--cor-verde); }
+.botao-cor--azul .botao-cor-amostra { background: var(--cor-azul); }
+.botao-cor--amarelo .botao-cor-amostra { background: var(--cor-amarelo); }
+.botao-cor--branco .botao-cor-amostra { background: var(--cor-branco); }
+.botao-cor--preto .botao-cor-amostra { background: #1f2937; }
+
+/* ---------------------------------------------------------------------
+   Cor selecionada + botao PROCESSAR OBJETO
+   --------------------------------------------------------------------- */
+
+.texto-cor-selecionada {
+    font-family: var(--fonte-numeros);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--cor-texto-suave);
+}
+
+.texto-cor-selecionada strong {
+    color: var(--cor-texto);
+}
+
+.botao-processar {
+    width: 100%;
+    min-height: 68px;
+    padding: 16px;
+    border-radius: var(--raio);
+    border: 1px solid #2aa8dd;
+    background: linear-gradient(180deg, #2aa8dd, var(--cor-primaria-escura));
+    color: #04212e;
+    font-family: var(--fonte-numeros);
+    font-size: 1.02rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background var(--transicao), opacity var(--transicao);
+}
+
+.botao-processar:hover:not([disabled]) {
+    background: linear-gradient(180deg, #37b6ec, #0b8dbb);
+}
+
+.botao-processar[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.botao-processar[data-estado="processando"] {
+    background: linear-gradient(180deg, #f5a524, #b8770f);
+    border-color: #f5a524;
+    color: #241503;
+}
+
+/* ---------------------------------------------------------------------
+   Cartoes de status (esteira, status, backend, cor no ESP32)
+   --------------------------------------------------------------------- */
+
+.grade-status {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.grade-status .cartao {
+    padding: 14px;
+    gap: 6px;
+}
+
+.grade-status .cartao-status {
+    align-self: flex-start;
+    font-size: 0.84rem;
+    padding: 7px 12px;
+}
+
+.cartao-valor-pequeno {
+    font-family: var(--fonte-numeros);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--cor-texto);
+    word-break: break-word;
+}
+
+/* ---------------------------------------------------------------------
+   Ultima deteccao
+   --------------------------------------------------------------------- */
+
+.ultima-deteccao {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ultima-deteccao .rotulo-cor {
+    font-size: 1.05rem;
+}
+
+/* ---------------------------------------------------------------------
+   Contadores do dashboard
+   --------------------------------------------------------------------- */
+
+.grade-contadores {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.contador {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 11px 13px;
+    border-radius: var(--raio-pequeno);
+    border: 1px solid var(--cor-borda);
+    background: rgba(9, 15, 28, 0.6);
+}
+
+.contador-rotulo {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cor-texto-fraco);
+}
+
+.contador-valor {
+    font-family: var(--fonte-numeros);
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.contador--destaque .contador-valor { color: #cdefff; }
+
+/* ---------------------------------------------------------------------
+   Log de comunicacao HTTP (registro das requisicoes reais)
+   --------------------------------------------------------------------- */
+
+.lista-log {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 240px;
+    overflow-y: auto;
+    font-family: var(--fonte-numeros);
+    font-size: 0.73rem;
+}
+
+.log-item {
+    display: flex;
+    gap: 8px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--cor-borda);
+    border-left-width: 3px;
+    background: rgba(9, 15, 28, 0.65);
+    color: var(--cor-texto-suave);
+    word-break: break-word;
+}
+
+.log-item[data-tipo="enviada"] { border-left-color: var(--cor-primaria); }
+.log-item[data-tipo="recebida"] { border-left-color: var(--cor-sucesso); color: #b7f2d3; }
+.log-item[data-tipo="erro"] { border-left-color: var(--cor-alerta); color: #ff9d9d; }
+.log-item[data-tipo="aviso"] { border-left-color: var(--cor-aviso); color: #ffd08a; }
+
+.log-hora {
+    color: var(--cor-texto-fraco);
+    flex: 0 0 auto;
+}
+
+.log-vazio {
+    color: var(--cor-texto-fraco);
+    font-family: var(--fonte);
+    font-size: 0.78rem;
+}
+
+/* ---------------------------------------------------------------------
+   Configuracoes
+   --------------------------------------------------------------------- */
+
+#configuracoes summary {
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+#configuracoes[open] summary {
+    margin-bottom: 14px;
+}
+
+.botao-pequeno {
+    padding: 7px 12px;
+    font-size: 0.78rem;
+}
+
+/* ---------------------------------------------------------------------
+   Rodape
+   --------------------------------------------------------------------- */
+
+.rodape {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+#rodape-detalhe {
+    font-family: var(--fonte-numeros);
+    color: var(--cor-texto-fraco);
+}
+
+/* ---------------------------------------------------------------------
+   Telas maiores: leitura confortavel sem exagerar na largura
+   --------------------------------------------------------------------- */
+
+@media (min-width: 700px) {
+    .grade-status,
+    .grade-contadores {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}

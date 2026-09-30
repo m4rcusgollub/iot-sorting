@@ -11,14 +11,22 @@ import java.util.List;
 /**
  * Configuracao de CORS.
  *
- * <p>Na V1 o dashboard e servido pela propria aplicacao Spring Boot, portanto CORS nao
- * e necessario e nenhuma origem e liberada por padrao. Quando um frontend separado for
- * criado (React, Vue, etc.), basta informar as origens em
- * {@code iot.sorting.cors.origens-permitidas} (separadas por virgula), por exemplo:</p>
+ * <p>O dashboard e o simulador (mobile) sao servidos pela propria aplicacao Spring Boot,
+ * portanto CORS nao e necessario e nenhuma origem e liberada por padrao. A configuracao so
+ * e usada quando a pagina que consome a API roda em outra origem - por exemplo o simulador
+ * aberto em {@code http://localhost:8080} (ou em um celular da rede local) consumindo o
+ * backend publicado no Render.</p>
+ *
+ * <p>As origens sao informadas em {@code iot.sorting.cors.origens-permitidas} (separadas por
+ * virgula) e aceitam curinga no host e na porta, o que cobre o IP dinamico do notebook
+ * durante a demonstracao:</p>
  *
  * <pre>
- * iot.sorting.cors.origens-permitidas=http://localhost:3000,http://192.168.1.50
+ * iot.sorting.cors.origens-permitidas=http://localhost:8080,http://192.168.*.*:8080
  * </pre>
+ *
+ * <p>No Render a mesma propriedade pode ser definida pela variavel de ambiente
+ * {@code IOT_SORTING_CORS_ORIGENS_PERMITIDAS}. Nenhuma outra origem e liberada.</p>
  */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
@@ -40,7 +48,9 @@ public class CorsConfig implements WebMvcConfigurer {
         }
 
         registry.addMapping("/api/**")
-                .allowedOrigins(origensPermitidas.toArray(String[]::new))
+                // Padroes sao aceitos no host/porta (ex.: http://192.168.*.*:8080) e tambem
+                // origens exatas (ex.: https://iot-sorting.onrender.com).
+                .allowedOriginPatterns(origensPermitidas.toArray(String[]::new))
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .maxAge(3600);

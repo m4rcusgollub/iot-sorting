@@ -14,5 +14,7 @@ COPY --from=build /app/target/iot-sorting-*.jar app.jar
 ENV PORT=8080
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Fuso horario do backend publicado: dataHora, ultimaDeteccao e objetosHoje passam a
+# ser gravados em horario local (equivalente a variavel de ambiente TZ=America/Sao_Paulo).
+ENTRYPOINT ["java", "-Duser.timezone=America/Sao_Paulo", "-jar", "app.jar"]
 

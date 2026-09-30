@@ -94,6 +94,7 @@ Dashboard (http://localhost:8080)
 - CSS3 (variáveis, grid, dark mode, responsivo)
 - JavaScript puro (ES5 compatível, Fetch API)
 - Chart.js 4.4.7 (arquivo local em `src/main/resources/static/js/vendor/chart.umd.min.js`, sem dependência de CDN)
+- Simulador do celular (`/simulador.html`): HTML + CSS + JavaScript puro, usando as mesmas variáveis de tema do dashboard
 
 **Infraestrutura**
 
@@ -256,6 +257,116 @@ Detalhes de acessibilidade e responsividade:
 - gráfico com descrição textual equivalente (resumo das cores);
 - cards, painéis e header se reorganizam em desktop, tablet e celular;
 - suporte a `prefers-reduced-motion` e foco visível para navegação por teclado.
+
+---
+
+## Simulador do celular (controle da esteira)
+
+Página: **http://localhost:8080/simulador.html** — também publicada no Render
+(`https://iot-sorting.onrender.com/simulador.html`). O dashboard tem o atalho **"Simulador do celular"** no cabeçalho.
+
+É uma página HTML/CSS/JS pura (mesmo padrão do dashboard, sem build e sem React) que representa o celular do operador: escolhe a cor do objeto e comanda a esteira. **Nenhum dado é simulado:** tudo o que aparece na tela vem de requisições HTTP reais para o ESP32 e para a API Java. Quando algo não responde, a tela mostra o motivo (`ESP32 não conectado`, `Backend indisponível`, `Erro HTTP nnn`) e o painel "Comunicação HTTP real" registra cada requisição com método, URL, código e tempo de resposta.
+
+> Na demonstração atual a câmera e o sensor IR não são usados: a classificação é escolhida no celular e o ESP32 apenas controla o relé da esteira e envia o resultado para a API.
+
+### Modos de operação
+
+| Modo | O que acontece | Quando usar |
+| --- | --- | --- |
+| **MODO ESP32** (padrão) | `GET {ESP32}/cor?valor=COR` → `GET {ESP32}/processar`. O firmware para a esteira, aguarda ~2 s, envia `POST /api/objetos` e religa a esteira | Demonstração com o hardware |
+| **MODO BACKEND** | O simulador envia `POST /api/objetos` direto (`{dispositivoId, cor, confianca}`) | Somente para testar a API sem o ESP32 |
+
+O modo em uso fica sempre visível no topo (`● ESP32 CONECTADO`, `● ESP32 OFFLINE` ou `● BACKEND DIRETO`) e no rodapé da página.
+
+### Fluxo em MODO ESP32
+
+```text
+celular (simulador)  →  GET /cor?valor=VERMELHO  →  ESP32 guarda a cor
+                     →  GET /processar           →  ESP32 para a esteira
+                                                    aguarda ~2 s
+                                                    POST {BACKEND}/api/objetos
+                     ←  HTTP 200                 ←  ESP32 religa a esteira
+polling GET /status (1 s)     → cor · esteira · processando
+GET /api/dashboard + /api/objetos/recentes → confirma o registro e atualiza os contadores
+```
+
+### Configuração (`src/main/resources/static/js/simulador.config.js`)
+
+```js
+window.IOT_SORTING_SIMULADOR = {
+    ESP32_URL: 'http://192.168.1.6',   // IP mostrado no Monitor Serial do firmware
+    BACKEND_URL: '',                   // '' = mesma origem da página (recomendado)
+    DISPOSITIVO_ID: 1,                 // Esteira Principal
+    CONFIANCA: 90,                     // usada no MODO BACKEND
+    MODO_PADRAO: 'ESP32',
+    INTERVALO_STATUS_ESP32_MS: 1000,
+    INTERVALO_BACKEND_MS: 5000
+};
+```
+
+Sem editar o arquivo também é possível ajustar:
+
+- pela barra de endereços: `/simulador.html?esp32=http://192.168.1.6&modo=BACKEND&confianca=95`
+- pelo painel **Configurações** da própria tela (salvo no `localStorage` do navegador; **Restaurar padrão** volta aos valores do arquivo)
+
+### Requisitos no firmware do ESP32
+
+| Requisição | Resposta esperada |
+| --- | --- |
+| `GET /status` | `{"cor":"VERMELHO","esteira":true,"processando":false}` |
+| `GET /cor?valor=VERMELHO` | HTTP 200 (cor guardada) |
+| `GET /processar` | HTTP 200 ao final do ciclo (parar esteira → ~2 s → `POST /api/objetos` → religar) |
+
+Como a página do simulador e o ESP32 são **origens diferentes** para o navegador, o firmware precisa responder com o cabeçalho de CORS:
+
+```cpp
+// Exemplo com ESPAsyncWebServer: adicione o cabecalho em todas as respostas JSON
+AsyncWebServerResponse *resposta = request->beginResponse(200, "application/json", json);
+resposta->addHeader("Access-Control-Allow-Origin", "*");
+request->send(resposta);
+```
+
+Sem esse cabeçalho o `fetch` do navegador é bloqueado e o simulador mostra `ESP32 não conectado`, mesmo com o ESP32 ligado.
+
+### Cenários de uso
+
+| Cenário | Endereço para abrir | Observações |
+| --- | --- | --- |
+| Tudo local (recomendado na apresentação) | `http://localhost:8080/simulador.html` | Simulador e API na mesma origem (sem CORS); ESP32 na mesma rede Wi-Fi |
+| Celular abrindo o simulador | `http://<ip-do-notebook>:8080/simulador.html` | Notebook e ESP32 na mesma rede Wi-Fi. Se o Chrome pedir permissão de acesso à rede local, permita |
+| Simulador local + backend do Render | `http://localhost:8080/simulador.html?backend=https://iot-sorting.onrender.com` | Precisa liberar a origem no Render (veja abaixo) |
+| Simulador aberto no Render | `https://iot-sorting.onrender.com/simulador.html` | Mesma origem (sem CORS), mas o navegador **bloqueia** requisições HTTP para o ESP32 a partir de páginas HTTPS (conteúdo misto) — use apenas para mostrar a tela |
+
+Para o cenário "simulador local + backend do Render", defina no Render a variável de ambiente:
+
+```text
+IOT_SORTING_CORS_ORIGENS_PERMITIDAS = http://localhost:8080,http://192.168.*.*:8080
+```
+
+Ela corresponde à propriedade `iot.sorting.cors.origens-permitidas` (aceita curinga no host/porta). Nenhuma outra origem é liberada: uma origem não informada recebe `403`.
+
+> Dica: no Render configure também `TZ=America/Sao_Paulo` para que `objetosHoje` e `dataHora` respeitem o horário local (por padrão o container roda em UTC).
+
+### Testando o fluxo
+
+1. Abra `http://localhost:8080/simulador.html` e confira os cartões **Backend: ONLINE** e **ESP32 CONECTADO**.
+2. Toque em **VERMELHO**: o botão fica destacado e a tela mostra `Cor selecionada: VERMELHO`.
+3. Toque em **PROCESSAR OBJETO**: aparece `Processando objeto...`, a esteira é exibida como `PARADA` e o status como `PROCESSANDO` durante o ciclo de `GET /processar` (o botão fica bloqueado contra duplo clique).
+4. Ao final o simulador confirma o registro lendo `GET /api/dashboard`: aparece `Objeto registrado no backend pelo ESP32: VERMELHO às HH:MM:SS` e os contadores são atualizados com os valores da API.
+5. Repita com VERDE, AZUL, AMARELO, BRANCO e PRETO e acompanhe o dashboard atualizar em até 5 segundos.
+
+Cenários negativos para demonstrar o tratamento de erros: nenhuma cor selecionada (aviso na tela), clique duplo (requisição única), ESP32 desligado (`ESP32 não conectado`), backend fora do ar (`Backend indisponível`) e erro de API (`Erro HTTP nnn` com a mensagem devolvida pelo backend).
+
+### Arquivos do simulador
+
+| Arquivo | Papel |
+| --- | --- |
+| `src/main/resources/static/simulador.html` | Tela do operador (mobile first) |
+| `src/main/resources/static/css/simulador.css` | Estilos do simulador (reaproveita as variáveis e componentes de `style.css`) |
+| `src/main/resources/static/js/simulador.config.js` | `ESP32_URL`, `BACKEND_URL`, dispositivo, confiança e tempos |
+| `src/main/resources/static/js/simulador.js` | Requisições HTTP, modos, polling, confirmação no backend e log |
+
+Nenhum endpoint novo foi criado: o simulador usa apenas `GET /status`, `GET /cor`, `GET /processar` (do ESP32) e `POST /api/objetos`, `GET /api/dashboard`, `GET /api/objetos/recentes` (da API existente).
 
 ---
 
