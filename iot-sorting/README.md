@@ -317,16 +317,15 @@ Sem editar o arquivo também é possível ajustar:
 | `GET /cor?valor=VERMELHO` | HTTP 200 (cor guardada) |
 | `GET /processar` | HTTP 200 ao final do ciclo (parar esteira → ~2 s → `POST /api/objetos` → religar) |
 
-Como a página do simulador e o ESP32 são **origens diferentes** para o navegador, o firmware precisa responder com o cabeçalho de CORS:
+Como a página do simulador e o ESP32 são **origens diferentes** para o navegador, o firmware precisa responder com o cabeçalho de CORS. Com o `WebServer` padrão do core ESP32 basta **uma linha** em `iniciarServidorWeb()`, antes de `server.begin()`:
 
 ```cpp
-// Exemplo com ESPAsyncWebServer: adicione o cabecalho em todas as respostas JSON
-AsyncWebServerResponse *resposta = request->beginResponse(200, "application/json", json);
-resposta->addHeader("Access-Control-Allow-Origin", "*");
-request->send(resposta);
+server.enableCORS(true);   // exige core ESP32 >= 2.0.4; adiciona Access-Control-Allow-Origin: *
 ```
 
-Sem esse cabeçalho o `fetch` do navegador é bloqueado e o simulador mostra `ESP32 não conectado`, mesmo com o ESP32 ligado.
+> **Qual arquivo gravar?** O `firmware.ino` da raiz do repositório é uma versão antiga (só tem as rotas `/` e `/salvar`, **sem** `/cor`, `/processar` e `/status`) e não é o que o simulador usa. O sketch em uso é o compilado pelo Arduino IDE (`sensor_proximidade_organizado.ino`, com as rotas do simulador). A linha `server.enableCORS(true);` já está aplicada nos dois arquivos — **grave o ESP32** para que o MODO ESP32 passe a funcionar. Enquanto isso, o simulador informa `ESP32 não conectado` (navegador bloqueia por falta do cabeçalho), mesmo com o ESP32 ligado.
+
+Na pior das hipóteses (core antigo), adicione `server.sendHeader("Access-Control-Allow-Origin", "*");` imediatamente antes de cada `server.send(...)` do sketch.
 
 ### Cenários de uso
 
@@ -337,15 +336,17 @@ Sem esse cabeçalho o `fetch` do navegador é bloqueado e o simulador mostra `ES
 | Simulador local + backend do Render | `http://localhost:8080/simulador.html?backend=https://iot-sorting.onrender.com` | Precisa liberar a origem no Render (veja abaixo) |
 | Simulador aberto no Render | `https://iot-sorting.onrender.com/simulador.html` | Mesma origem (sem CORS), mas o navegador **bloqueia** requisições HTTP para o ESP32 a partir de páginas HTTPS (conteúdo misto) — use apenas para mostrar a tela |
 
-Para o cenário "simulador local + backend do Render", defina no Render a variável de ambiente:
+Para o cenário "simulador local + backend do Render" **nenhuma configuração extra é necessária**: a lista de origens já vem em `iot.sorting.cors.origens-permitidas` (`http://localhost:8080,http://127.0.0.1:8080,http://192.168.*.*:8080`), que libera apenas loopback e a rede local na porta 8080 — qualquer outra origem recebe `403`.
+
+Se precisar liberar outra origem, crie a variável de ambiente no painel do Render (ela sobrescreve o valor do arquivo):
 
 ```text
 IOT_SORTING_CORS_ORIGENS_PERMITIDAS = http://localhost:8080,http://192.168.*.*:8080
 ```
 
-Ela corresponde à propriedade `iot.sorting.cors.origens-permitidas` (aceita curinga no host/porta). Nenhuma outra origem é liberada: uma origem não informada recebe `403`.
-
-> Dica: no Render configure também `TZ=America/Sao_Paulo` para que `objetosHoje` e `dataHora` respeitem o horário local (por padrão o container roda em UTC).
+> **Fuso horário** já está definido no `Dockerfile` (`-Duser.timezone=America/Sao_Paulo`), equivalente à variável `TZ=America/Sao_Paulo` — `objetosHoje` e `dataHora` são gravados em horário local.
+>
+> **Histórico no Render:** o disco do plano gratuito é efêmero e o banco `iot_sorting.db` vive dentro do container — **cada deploy zera as detecções** (o dispositivo padrão é recriado automaticamente). Para preservar o histórico entre deploys é preciso um disco persistente ou um Postgres gerenciado.
 
 ### Testando o fluxo
 
@@ -354,6 +355,7 @@ Ela corresponde à propriedade `iot.sorting.cors.origens-permitidas` (aceita cur
 3. Toque em **PROCESSAR OBJETO**: aparece `Processando objeto...`, a esteira é exibida como `PARADA` e o status como `PROCESSANDO` durante o ciclo de `GET /processar` (o botão fica bloqueado contra duplo clique).
 4. Ao final o simulador confirma o registro lendo `GET /api/dashboard`: aparece `Objeto registrado no backend pelo ESP32: VERMELHO às HH:MM:SS` e os contadores são atualizados com os valores da API.
 5. Repita com VERDE, AZUL, AMARELO, BRANCO e PRETO e acompanhe o dashboard atualizar em até 5 segundos.
+6. Para zerar a contagem antes de uma nova apresentação use o botão **Limpar dados** (no painel "Objetos hoje"): a tela pede confirmação, envia `DELETE /api/objetos` para o backend configurado e atualiza os contadores (os dispositivos cadastrados são mantidos).
 
 Cenários negativos para demonstrar o tratamento de erros: nenhuma cor selecionada (aviso na tela), clique duplo (requisição única), ESP32 desligado (`ESP32 não conectado`), backend fora do ar (`Backend indisponível`) e erro de API (`Erro HTTP nnn` com a mensagem devolvida pelo backend).
 
@@ -379,6 +381,7 @@ Base: `/api` · Formato: `application/json` · Sem autenticação na V1.
 | Método | Endpoint | Descrição | Respostas |
 | --- | --- | --- | --- |
 | `POST` | `/api/objetos` | Registra uma detecção enviada pelo ESP32-CAM | `201`, `400`, `404` |
+| `DELETE` | `/api/objetos` | Apaga **todas** as detecções registradas (mantém os dispositivos) | `200` |
 | `GET` | `/api/objetos` | Lista todas as detecções (mais recentes primeiro) | `200` |
 | `GET` | `/api/objetos?cor=VERMELHO` | Lista as detecções filtrando por cor | `200`, `400` |
 | `GET` | `/api/objetos/{id}` | Detalhe de uma detecção | `200`, `404` |
@@ -411,6 +414,18 @@ Content-Type: application/json
 ```
 
 Ao receber uma detecção o backend: valida o dispositivo, valida cor e confiança (0 a 100), registra `dataHora`, salva no PostgreSQL, atualiza `ultimaConexao` e coloca o dispositivo como `ONLINE`.
+
+**Limpeza dos dados registrados** (botão **Limpar dados** do simulador)
+
+```http
+DELETE /api/objetos
+```
+
+```json
+{ "removidos": 12 }
+```
+
+Apaga apenas o histórico de objetos: os dispositivos cadastrados são mantidos, então o ESP32 continua válido para registrar novas detecções. A ação é confirmada na tela do simulador antes de ser enviada.
 
 ### Dispositivos
 

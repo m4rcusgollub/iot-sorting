@@ -1,11 +1,13 @@
 package com.iotsorting.controller;
 
+import com.iotsorting.dto.LimpezaResponse;
 import com.iotsorting.dto.ObjetoRequest;
 import com.iotsorting.dto.ObjetoResponse;
 import com.iotsorting.enums.Cor;
 import com.iotsorting.service.ObjetoService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,6 +51,17 @@ public class ObjetoController {
     @GetMapping
     public List<ObjetoResponse> listar(@RequestParam(name = "cor", required = false) Cor cor) {
         return objetoService.listar(cor);
+    }
+
+    /**
+     * {@code DELETE /api/objetos} - apaga todas as deteccoes registradas.
+     *
+     * <p>Limpeza usada na demonstracao (o botao "Limpar dados" do simulador). Os
+     * dispositivos cadastrados sao mantidos.</p>
+     */
+    @DeleteMapping
+    public LimpezaResponse limpar() {
+        return new LimpezaResponse(objetoService.limpar());
     }
 
     /** {@code GET /api/objetos/recentes?limite=10&dispositivoId=1} - ultimas deteccoes. */

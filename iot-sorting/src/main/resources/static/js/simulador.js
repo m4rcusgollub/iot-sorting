@@ -1146,6 +1146,51 @@
             });
     }
 
+    /**
+     * DELETE /api/objetos - apaga as deteccoes registradas no backend consultado
+     * (botao "Limpar dados"). Os dispositivos cadastrados sao mantidos.
+     */
+    function limparDados() {
+        if (estado.processando) {
+            definirMensagem('Aguarde o processamento atual terminar antes de limpar os dados.', 'erro');
+            return;
+        }
+        if (!baseBackend()) {
+            definirMensagem('Endereço do backend não identificado.', 'erro');
+            return;
+        }
+
+        var confirmado = window.confirm(
+            'Apagar TODAS as detecções registradas em ' + descricaoBackend() + '?\n\n' +
+            'Os dispositivos cadastrados serão mantidos. Esta ação não pode ser desfeita.');
+        if (!confirmado) {
+            registrarLog('aviso', 'Limpeza de dados cancelada pelo operador.');
+            return;
+        }
+
+        var botao = el('botao-limpar-dados');
+        botao.disabled = true;
+        definirMensagem('Limpando os dados registrados no backend…', 'info');
+
+        requisitar(baseBackend() + '/api/objetos', { method: 'DELETE' }, config.timeoutBackendPost)
+            .then(function (resposta) {
+                var removidos = (resposta.dados && typeof resposta.dados.removidos === 'number')
+                    ? resposta.dados.removidos
+                    : 0;
+                registrarLog('aviso', 'DELETE /api/objetos → ' + removidos + ' detecção(ões) removida(s) de ' + descricaoBackend());
+                definirMensagem('Dados limpos: ' + removidos + ' detecção(ões) removidas. Contadores atualizados.', 'sucesso');
+                return atualizarBackend();
+            })
+            .catch(function (erro) {
+                var mensagem = (erro && erro.mensagem) ? erro.mensagem : 'Falha desconhecida ao limpar os dados';
+                registrarLog('erro', 'Falha ao limpar os dados: ' + mensagem);
+                definirMensagem('Não foi possível limpar os dados — ' + mensagem, 'erro');
+            })
+            .finally(function () {
+                botao.disabled = false;
+            });
+    }
+
     // ====================================================================
     // 10. Inicializacao
     // ====================================================================
@@ -1189,6 +1234,7 @@
             definirModo('BACKEND');
         });
         el('botao-limpar-log').addEventListener('click', limparLog);
+        el('botao-limpar-dados').addEventListener('click', limparDados);
         el('form-config').addEventListener('submit', salvarConfiguracoes);
         el('botao-restaurar-config').addEventListener('click', restaurarConfiguracoes);
         el('botao-testar-esp32').addEventListener('click', testarEsp32);

@@ -21,6 +21,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -144,6 +145,16 @@ class ObjetoControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("Objeto não encontrado: identificador 999"));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/objetos deve apagar as deteccoes e informar quantas foram removidas")
+    void deveLimparDeteccoes() throws Exception {
+        when(objetoService.limpar()).thenReturn(12L);
+
+        mockMvc.perform(delete("/api/objetos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.removidos").value(12));
     }
 
 }

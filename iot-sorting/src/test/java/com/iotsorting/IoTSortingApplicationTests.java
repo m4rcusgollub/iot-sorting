@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -85,9 +86,33 @@ class IoTSortingApplicationTests {
     }
 
     @Test
-    @DisplayName("deve responder as paginas do dashboard")
+    @DisplayName("deve limpar as deteccoes registradas mantendo os dispositivos")
+    void deveLimparDeteccoesMantendoDispositivos() throws Exception {
+        Long dispositivoId = dispositivoRepository.findAllByOrderByNomeAsc().get(0).getId();
+
+        mockMvc.perform(post("/api/objetos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dispositivoId\":" + dispositivoId + ",\"cor\":\"AZUL\",\"confianca\":88}"))
+                .andExpect(status().isCreated());
+
+        long antes = objetoRepository.count();
+        assertThat(antes).isGreaterThanOrEqualTo(1);
+
+        mockMvc.perform(delete("/api/objetos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.removidos").value((int) antes));
+
+        assertThat(objetoRepository.count()).isZero();
+        assertThat(dispositivoRepository.existsByCodigo("ESP32CAM-001")).isTrue();
+    }
+
+    @Test
+    @DisplayName("deve responder as paginas do dashboard e do simulador")
     void deveServirArquivosEstaticos() throws Exception {
         mockMvc.perform(get("/"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/simulador.html"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/css/style.css"))

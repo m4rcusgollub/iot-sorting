@@ -160,4 +160,15 @@ class ObjetoServiceTest {
         assertThat(resposta.dataHora()).isEqualTo(LocalDateTime.of(2026, 9, 24, 22, 51, 32));
     }
 
+    @Test
+    @DisplayName("limpar deve remover todas as deteccoes registradas e devolver a quantidade")
+    void deveLimparDeteccoes() {
+        when(objetoRepository.count()).thenReturn(4L);
+
+        long removidos = objetoService.limpar();
+
+        assertThat(removidos).isEqualTo(4L);
+        verify(objetoRepository).deleteAll();
+    }
+
 }

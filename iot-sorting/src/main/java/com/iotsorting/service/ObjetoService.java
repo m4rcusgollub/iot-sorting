@@ -103,6 +103,22 @@ public class ObjetoService {
         return objetos.stream().map(ObjetoService::paraResposta).toList();
     }
 
+    /**
+     * Apaga todas as deteccoes registradas (limpeza manual, usada na demonstracao).
+     *
+     * <p>Os dispositivos cadastrados nao sao alterados: apenas o historico de objetos
+     * e removido.</p>
+     *
+     * @return quantidade de deteccoes removidas
+     */
+    @Transactional
+    public long limpar() {
+        long removidos = objetoRepository.count();
+        objetoRepository.deleteAll();
+        log.info("{} deteccao(oes) removida(s) na limpeza manual.", removidos);
+        return removidos;
+    }
+
     private void validarDeteccao(ObjetoRequest requisicao) {
         if (requisicao.cor() == null) {
             throw new DadosInvalidosException("A cor é obrigatória");
