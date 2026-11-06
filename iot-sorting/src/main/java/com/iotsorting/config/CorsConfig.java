@@ -11,10 +11,10 @@ import java.util.List;
 /**
  * Configuracao de CORS.
  *
- * <p>O dashboard e o simulador (mobile) sao servidos pela propria aplicacao Spring Boot,
- * portanto CORS nao e necessario e nenhuma origem e liberada por padrao. A configuracao so
- * e usada quando a pagina que consome a API roda em outra origem - por exemplo o simulador
- * aberto em {@code http://localhost:8080} (ou em um celular da rede local) consumindo o
+ * <p>O dashboard e servido pela propria aplicacao Spring Boot, portanto CORS nao e
+ * necessario e nenhuma origem e liberada por padrao. A configuracao so e usada quando
+ * a pagina que consome a API roda em outra origem - por exemplo um frontend aberto em
+ * {@code http://localhost:8080} (ou em outro aparelho da rede local) consumindo o
  * backend publicado no Render.</p>
  *
  * <p>As origens sao informadas em {@code iot.sorting.cors.origens-permitidas} (separadas por

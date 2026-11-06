@@ -107,12 +107,12 @@ class IoTSortingApplicationTests {
     }
 
     @Test
-    @DisplayName("deve responder as paginas do dashboard e do simulador")
+    @DisplayName("deve responder as paginas do dashboard e da exibicao")
     void deveServirArquivosEstaticos() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/simulador.html"))
+        mockMvc.perform(get("/exibicao.html"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/css/style.css"))

@@ -200,6 +200,7 @@ p {
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 0.08em;
+    transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
 }
 
 .indicador-simbolo {
@@ -497,13 +498,6 @@ p {
 
 .botao--primario:hover {
     background: linear-gradient(180deg, #37b6ec, #0b8dbb);
-}
-
-/* Botao usado como link (ex.: atalho para o simulador do celular) */
-.botao--link {
-    display: inline-flex;
-    align-items: center;
-    text-decoration: none;
 }
 
 .botao[disabled] {

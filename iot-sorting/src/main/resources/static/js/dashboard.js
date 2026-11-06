@@ -98,6 +98,35 @@
         return Number(valor || 0).toLocaleString('pt-BR');
     }
 
+    var reduzirAnimacao = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    /** Contagem subindo suave nos cartoes quando o valor aumenta (respeita prefers-reduced-motion). */
+    function sobeNumero(destino, valor) {
+        var alvo = Number(valor || 0);
+        var de = destino._valorAtual === undefined ? null : destino._valorAtual;
+        if (destino._animacao) {
+            window.cancelAnimationFrame(destino._animacao);
+            destino._animacao = null;
+        }
+        if (reduzirAnimacao || de === null || alvo <= de) {
+            destino._valorAtual = alvo;
+            destino.textContent = formatarNumero(alvo);
+            return;
+        }
+        var inicio = window.performance.now();
+        var passo = function (t) {
+            var k = Math.min(1, (t - inicio) / 700);
+            var n = Math.round(de + (alvo - de) * (k === 1 ? 1 : 1 - Math.pow(1 - k, 3)));
+            destino.textContent = formatarNumero(n);
+            if (k < 1) {
+                destino._animacao = window.requestAnimationFrame(passo);
+            } else {
+                destino._valorAtual = alvo;
+            }
+        };
+        destino._animacao = window.requestAnimationFrame(passo);
+    }
+
     function rotuloCor(cor) {
         if (!cor) {
             return { texto: '—', classe: 'indefinido' };
@@ -167,6 +196,7 @@
                     backgroundColor: CORES.map(function (item) { return item.cor; }),
                     borderColor: '#111c30',
                     borderWidth: 2,
+                    borderRadius: 4,
                     hoverOffset: 6
                 }]
             },
@@ -236,10 +266,10 @@
 
     function atualizarIndicadores() {
         return buscarJson(comParametroDispositivo(ENDPOINTS.dashboard)).then(function (resumo) {
-            el('valor-objetos-hoje').textContent = formatarNumero(resumo.objetosHoje);
-            el('valor-vermelhos').textContent = formatarNumero(resumo.vermelhos);
-            el('valor-verdes').textContent = formatarNumero(resumo.verdes);
-            el('valor-azuis').textContent = formatarNumero(resumo.azuis);
+            sobeNumero(el('valor-objetos-hoje'), resumo.objetosHoje);
+            sobeNumero(el('valor-vermelhos'), resumo.vermelhos);
+            sobeNumero(el('valor-verdes'), resumo.verdes);
+            sobeNumero(el('valor-azuis'), resumo.azuis);
 
             var apoioDispositivo = resumo.dispositivo
                 ? 'Última conexão: ' + formatarDataHora(resumo.dispositivo.ultimaConexao)

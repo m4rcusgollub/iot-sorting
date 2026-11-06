@@ -1,0 +1,10 @@
+# Normalizacao de finais de linha
+* text=auto
+
+# Scripts Windows com CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Scripts Unix com LF
+mvnw text eol=lf
+*.sh text eol=lf

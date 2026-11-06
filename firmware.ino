@@ -263,7 +263,7 @@ void iniciarAP() {
 void iniciarServidorWeb() {
   server.on("/", HTTP_GET, paginaConfig);
   server.on("/salvar", HTTP_POST, salvarWiFi);
-  // CORS: permite que o simulador do celular (outra origem) acesse o ESP32.
+  // CORS: permite que paginas em outra origem (ex.: notebook na rede local) acessem o ESP32.
   server.enableCORS(true);
   server.begin();
   Serial.println("Servidor web local ativo.");

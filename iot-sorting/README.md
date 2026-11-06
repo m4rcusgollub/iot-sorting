@@ -94,7 +94,6 @@ Dashboard (http://localhost:8080)
 - CSS3 (variáveis, grid, dark mode, responsivo)
 - JavaScript puro (ES5 compatível, Fetch API)
 - Chart.js 4.4.7 (arquivo local em `src/main/resources/static/js/vendor/chart.umd.min.js`, sem dependência de CDN)
-- Simulador do celular (`/simulador.html`): HTML + CSS + JavaScript puro, usando as mesmas variáveis de tema do dashboard
 
 **Infraestrutura**
 
@@ -258,117 +257,7 @@ Detalhes de acessibilidade e responsividade:
 - cards, painéis e header se reorganizam em desktop, tablet e celular;
 - suporte a `prefers-reduced-motion` e foco visível para navegação por teclado.
 
----
-
-## Simulador do celular (controle da esteira)
-
-Página: **http://localhost:8080/simulador.html** — também publicada no Render
-(`https://iot-sorting.onrender.com/simulador.html`). O dashboard tem o atalho **"Simulador do celular"** no cabeçalho.
-
-É uma página HTML/CSS/JS pura (mesmo padrão do dashboard, sem build e sem React) que representa o celular do operador: escolhe a cor do objeto e comanda a esteira. **Nenhum dado é simulado:** tudo o que aparece na tela vem de requisições HTTP reais para o ESP32 e para a API Java. Quando algo não responde, a tela mostra o motivo (`ESP32 não conectado`, `Backend indisponível`, `Erro HTTP nnn`) e o painel "Comunicação HTTP real" registra cada requisição com método, URL, código e tempo de resposta.
-
-> Na demonstração atual a câmera e o sensor IR não são usados: a classificação é escolhida no celular e o ESP32 apenas controla o relé da esteira e envia o resultado para a API.
-
-### Modos de operação
-
-| Modo | O que acontece | Quando usar |
-| --- | --- | --- |
-| **MODO ESP32** (padrão) | `GET {ESP32}/cor?valor=COR` → `GET {ESP32}/processar`. O firmware para a esteira, aguarda ~2 s, envia `POST /api/objetos` e religa a esteira | Demonstração com o hardware |
-| **MODO BACKEND** | O simulador envia `POST /api/objetos` direto (`{dispositivoId, cor, confianca}`) | Somente para testar a API sem o ESP32 |
-
-O modo em uso fica sempre visível no topo (`● ESP32 CONECTADO`, `● ESP32 OFFLINE` ou `● BACKEND DIRETO`) e no rodapé da página.
-
-### Fluxo em MODO ESP32
-
-```text
-celular (simulador)  →  GET /cor?valor=VERMELHO  →  ESP32 guarda a cor
-                     →  GET /processar           →  ESP32 para a esteira
-                                                    aguarda ~2 s
-                                                    POST {BACKEND}/api/objetos
-                     ←  HTTP 200                 ←  ESP32 religa a esteira
-polling GET /status (1 s)     → cor · esteira · processando
-GET /api/dashboard + /api/objetos/recentes → confirma o registro e atualiza os contadores
-```
-
-### Configuração (`src/main/resources/static/js/simulador.config.js`)
-
-```js
-window.IOT_SORTING_SIMULADOR = {
-    ESP32_URL: 'http://192.168.1.6',   // IP mostrado no Monitor Serial do firmware
-    BACKEND_URL: '',                   // '' = mesma origem da página (recomendado)
-    DISPOSITIVO_ID: 1,                 // Esteira Principal
-    CONFIANCA: 90,                     // usada no MODO BACKEND
-    MODO_PADRAO: 'ESP32',
-    INTERVALO_STATUS_ESP32_MS: 1000,
-    INTERVALO_BACKEND_MS: 5000
-};
-```
-
-Sem editar o arquivo também é possível ajustar:
-
-- pela barra de endereços: `/simulador.html?esp32=http://192.168.1.6&modo=BACKEND&confianca=95`
-- pelo painel **Configurações** da própria tela (salvo no `localStorage` do navegador; **Restaurar padrão** volta aos valores do arquivo)
-
-### Requisitos no firmware do ESP32
-
-| Requisição | Resposta esperada |
-| --- | --- |
-| `GET /status` | `{"cor":"VERMELHO","esteira":true,"processando":false}` |
-| `GET /cor?valor=VERMELHO` | HTTP 200 (cor guardada) |
-| `GET /processar` | HTTP 200 ao final do ciclo (parar esteira → ~2 s → `POST /api/objetos` → religar) |
-
-Como a página do simulador e o ESP32 são **origens diferentes** para o navegador, o firmware precisa responder com o cabeçalho de CORS. Com o `WebServer` padrão do core ESP32 basta **uma linha** em `iniciarServidorWeb()`, antes de `server.begin()`:
-
-```cpp
-server.enableCORS(true);   // exige core ESP32 >= 2.0.4; adiciona Access-Control-Allow-Origin: *
-```
-
-> **Qual arquivo gravar?** O `firmware.ino` da raiz do repositório é uma versão antiga (só tem as rotas `/` e `/salvar`, **sem** `/cor`, `/processar` e `/status`) e não é o que o simulador usa. O sketch em uso é o compilado pelo Arduino IDE (`sensor_proximidade_organizado.ino`, com as rotas do simulador). A linha `server.enableCORS(true);` já está aplicada nos dois arquivos — **grave o ESP32** para que o MODO ESP32 passe a funcionar. Enquanto isso, o simulador informa `ESP32 não conectado` (navegador bloqueia por falta do cabeçalho), mesmo com o ESP32 ligado.
-
-Na pior das hipóteses (core antigo), adicione `server.sendHeader("Access-Control-Allow-Origin", "*");` imediatamente antes de cada `server.send(...)` do sketch.
-
-### Cenários de uso
-
-| Cenário | Endereço para abrir | Observações |
-| --- | --- | --- |
-| Tudo local (recomendado na apresentação) | `http://localhost:8080/simulador.html` | Simulador e API na mesma origem (sem CORS); ESP32 na mesma rede Wi-Fi |
-| Celular abrindo o simulador | `http://<ip-do-notebook>:8080/simulador.html` | Notebook e ESP32 na mesma rede Wi-Fi. Se o Chrome pedir permissão de acesso à rede local, permita |
-| Simulador local + backend do Render | `http://localhost:8080/simulador.html?backend=https://iot-sorting.onrender.com` | Precisa liberar a origem no Render (veja abaixo) |
-| Simulador aberto no Render | `https://iot-sorting.onrender.com/simulador.html` | Mesma origem (sem CORS), mas o navegador **bloqueia** requisições HTTP para o ESP32 a partir de páginas HTTPS (conteúdo misto) — use apenas para mostrar a tela |
-
-Para o cenário "simulador local + backend do Render" **nenhuma configuração extra é necessária**: a lista de origens já vem em `iot.sorting.cors.origens-permitidas` (`http://localhost:8080,http://127.0.0.1:8080,http://192.168.*.*:8080`), que libera apenas loopback e a rede local na porta 8080 — qualquer outra origem recebe `403`.
-
-Se precisar liberar outra origem, crie a variável de ambiente no painel do Render (ela sobrescreve o valor do arquivo):
-
-```text
-IOT_SORTING_CORS_ORIGENS_PERMITIDAS = http://localhost:8080,http://192.168.*.*:8080
-```
-
-> **Fuso horário** já está definido no `Dockerfile` (`-Duser.timezone=America/Sao_Paulo`), equivalente à variável `TZ=America/Sao_Paulo` — `objetosHoje` e `dataHora` são gravados em horário local.
->
-> **Histórico no Render:** o disco do plano gratuito é efêmero e o banco `iot_sorting.db` vive dentro do container — **cada deploy zera as detecções** (o dispositivo padrão é recriado automaticamente). Para preservar o histórico entre deploys é preciso um disco persistente ou um Postgres gerenciado.
-
-### Testando o fluxo
-
-1. Abra `http://localhost:8080/simulador.html` e confira os cartões **Backend: ONLINE** e **ESP32 CONECTADO**.
-2. Toque em **VERMELHO**: o botão fica destacado e a tela mostra `Cor selecionada: VERMELHO`.
-3. Toque em **PROCESSAR OBJETO**: aparece `Processando objeto...`, a esteira é exibida como `PARADA` e o status como `PROCESSANDO` durante o ciclo de `GET /processar` (o botão fica bloqueado contra duplo clique).
-4. Ao final o simulador confirma o registro lendo `GET /api/dashboard`: aparece `Objeto registrado no backend pelo ESP32: VERMELHO às HH:MM:SS` e os contadores são atualizados com os valores da API.
-5. Repita com VERDE, AZUL, AMARELO, BRANCO e PRETO e acompanhe o dashboard atualizar em até 5 segundos.
-6. Para zerar a contagem antes de uma nova apresentação use o botão **Limpar dados** (no painel "Objetos hoje"): a tela pede confirmação, envia `DELETE /api/objetos` para o backend configurado e atualiza os contadores (os dispositivos cadastrados são mantidos).
-
-Cenários negativos para demonstrar o tratamento de erros: nenhuma cor selecionada (aviso na tela), clique duplo (requisição única), ESP32 desligado (`ESP32 não conectado`), backend fora do ar (`Backend indisponível`) e erro de API (`Erro HTTP nnn` com a mensagem devolvida pelo backend).
-
-### Arquivos do simulador
-
-| Arquivo | Papel |
-| --- | --- |
-| `src/main/resources/static/simulador.html` | Tela do operador (mobile first) |
-| `src/main/resources/static/css/simulador.css` | Estilos do simulador (reaproveita as variáveis e componentes de `style.css`) |
-| `src/main/resources/static/js/simulador.config.js` | `ESP32_URL`, `BACKEND_URL`, dispositivo, confiança e tempos |
-| `src/main/resources/static/js/simulador.js` | Requisições HTTP, modos, polling, confirmação no backend e log |
-
-Nenhum endpoint novo foi criado: o simulador usa apenas `GET /status`, `GET /cor`, `GET /processar` (do ESP32) e `POST /api/objetos`, `GET /api/dashboard`, `GET /api/objetos/recentes` (da API existente).
+**Tela de exibição para a apresentação:** página `exibicao.html` (com `css/exibicao.css` e `js/exibicao.js`) — somente leitura, mesmo tema e mesma API do dashboard (`GET /api/dashboard` e `GET /api/objetos/recentes`, polling de 5 s), com relógio grande, painel por cor, gráfico horizontal e destaque para a detecção mais nova. Pensada para TV/projetor: abra `/exibicao.html` em tela cheia (F11).
 
 ---
 
@@ -415,7 +304,7 @@ Content-Type: application/json
 
 Ao receber uma detecção o backend: valida o dispositivo, valida cor e confiança (0 a 100), registra `dataHora`, salva no PostgreSQL, atualiza `ultimaConexao` e coloca o dispositivo como `ONLINE`.
 
-**Limpeza dos dados registrados** (botão **Limpar dados** do simulador)
+**Limpeza dos dados registrados** (`DELETE /api/objetos`)
 
 ```http
 DELETE /api/objetos
@@ -425,7 +314,7 @@ DELETE /api/objetos
 { "removidos": 12 }
 ```
 
-Apaga apenas o histórico de objetos: os dispositivos cadastrados são mantidos, então o ESP32 continua válido para registrar novas detecções. A ação é confirmada na tela do simulador antes de ser enviada.
+Apaga apenas o histórico de objetos: os dispositivos cadastrados são mantidos, então o ESP32 continua válido para registrar novas detecções.
 
 ### Dispositivos
 

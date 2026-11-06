@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="IoT Sorting - Tela de exibição para TV/projetor com os dados da esteira.">
+<meta name="color-scheme" content="dark">
+<title>IoT Sorting — Exibição</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b1120'/><circle cx='16' cy='16' r='8' fill='none' stroke='%2338bdf8' stroke-width='3'/><circle cx='16' cy='16' r='3' fill='%2338bdf8'/></svg>">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/exibicao.css">
+</head>
+<body class="exibicao">
+<header class="ex-topo">
+  <h1 class="ex-nome">IoT Sorting</h1>
+  <div class="ex-hora">
+    <time id="relogio" class="ex-relogio" aria-hidden="true">--:--:--</time>
+    <p id="rotulo-data" class="ex-data">—</p>
+  </div>
+  <div class="ex-conexao">
+    <p id="conexao" class="ex-estado ex-espera" role="status">⌛ Conectando…</p>
+    <p id="detalhe" class="ex-detalhe">Conexão com o servidor</p>
+  </div>
+</header>
+
+<main class="ex-main">
+  <noscript><p class="ex-msg">■ JavaScript desativado — esta tela precisa dele para exibir os dados.</p></noscript>
+
+  <section class="ex-faixa" aria-label="Indicadores gerais">
+    <div class="ex-ind ex-ind--hoje"><span class="ex-rotulo">Objetos hoje</span><strong id="v-hoje" class="ex-valor">—</strong></div>
+    <div class="ex-ind"><span class="ex-rotulo">Total geral</span><strong id="v-geral" class="ex-valor">—</strong></div>
+    <div class="ex-ind"><span class="ex-rotulo">Esteira</span><strong id="v-esteira" class="ex-valor ex-valor--estado">—</strong></div>
+    <div class="ex-ind"><span class="ex-rotulo">ESP32</span><strong id="v-esp32" class="ex-valor ex-valor--estado">—</strong></div>
+  </section>
+
+  <section class="ex-cores" aria-label="Objetos por cor hoje">
+    <div class="ex-cor" data-cor="VERMELHO"><span class="ex-rotulo"><i class="ex-amostra"></i>VERMELHO</span><strong class="ex-valor">—</strong></div>
+    <div class="ex-cor" data-cor="VERDE"><span class="ex-rotulo"><i class="ex-amostra"></i>VERDE</span><strong class="ex-valor">—</strong></div>
+    <div class="ex-cor" data-cor="AZUL"><span class="ex-rotulo"><i class="ex-amostra"></i>AZUL</span><strong class="ex-valor">—</strong></div>
+    <div class="ex-cor" data-cor="AMARELO"><span class="ex-rotulo"><i class="ex-amostra"></i>AMARELO</span><strong class="ex-valor">—</strong></div>
+    <div class="ex-cor" data-cor="BRANCO"><span class="ex-rotulo"><i class="ex-amostra"></i>BRANCO</span><strong class="ex-valor">—</strong></div>
+    <div class="ex-cor" data-cor="PRETO"><span class="ex-rotulo"><i class="ex-amostra"></i>PRETO</span><strong class="ex-valor">—</strong></div>
+  </section>
+
+  <div class="ex-grade">
+    <section class="ex-painel" aria-labelledby="t-graf">
+      <h2 id="t-graf" class="ex-titulo">Distribuição de hoje</h2>
+      <div class="ex-grafico"><canvas id="grafico" role="img" aria-label="Gráfico de barras: aguardando dados"></canvas></div>
+      <p id="msg-grafico" class="ex-msg" hidden></p>
+    </section>
+    <section class="ex-painel" aria-labelledby="t-tab">
+      <h2 id="t-tab" class="ex-titulo">Últimas detecções</h2>
+      <table class="ex-tabela" aria-labelledby="t-tab">
+        <thead><tr><th scope="col">Horário</th><th scope="col">Cor</th><th scope="col">Confiança</th><th scope="col">Dispositivo</th></tr></thead>
+        <tbody id="linhas"><tr><td colspan="4">⌛ Conectando…</td></tr></tbody>
+      </table>
+    </section>
+  </div>
+</main>
+
+<footer class="ex-rodape">
+  <span>IoT Sorting v1.0 · dados ao vivo da API</span>
+  <span id="atualizado">Aguardando primeira atualização…</span>
+</footer>
+<p id="anuncio" class="ex-sr" aria-live="polite"></p>
+
+<script src="/js/vendor/chart.umd.min.js"></script>
+<script src="/js/exibicao.js"></script>
+</body>
+</html>

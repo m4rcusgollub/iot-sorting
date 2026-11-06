@@ -56,8 +56,7 @@ public class ObjetoController {
     /**
      * {@code DELETE /api/objetos} - apaga todas as deteccoes registradas.
      *
-     * <p>Limpeza usada na demonstracao (o botao "Limpar dados" do simulador). Os
-     * dispositivos cadastrados sao mantidos.</p>
+     * <p>Limpeza usada na demonstracao. Os dispositivos cadastrados sao mantidos.</p>
      */
     @DeleteMapping
     public LimpezaResponse limpar() {
